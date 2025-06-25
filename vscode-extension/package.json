@@ -1,0 +1,162 @@
+{
+  "name": "smartui-fusion-vscode",
+  "displayName": "SmartUI Fusion",
+  "description": "智能UI開發助手 - 集成語音命令、可視化調試和智能分析",
+  "version": "1.0.0",
+  "publisher": "smartui-fusion",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other",
+    "Debuggers",
+    "Machine Learning"
+  ],
+  "keywords": [
+    "smartui",
+    "ai",
+    "voice",
+    "debug",
+    "intelligent"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "smartui.startVoiceCommand",
+        "title": "開始語音命令",
+        "category": "SmartUI",
+        "icon": "$(mic)"
+      },
+      {
+        "command": "smartui.stopVoiceCommand",
+        "title": "停止語音命令",
+        "category": "SmartUI",
+        "icon": "$(mic-off)"
+      },
+      {
+        "command": "smartui.toggleVisualDebug",
+        "title": "切換可視化調試",
+        "category": "SmartUI",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "smartui.showUserAnalytics",
+        "title": "顯示用戶分析",
+        "category": "SmartUI",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "smartui.openSmartPanel",
+        "title": "打開 SmartUI 面板",
+        "category": "SmartUI",
+        "icon": "$(dashboard)"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "smartui.userAnalytics",
+          "name": "用戶分析",
+          "when": "smartui.enabled"
+        },
+        {
+          "id": "smartui.voiceCommands",
+          "name": "語音命令",
+          "when": "smartui.enabled"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "smartui-fusion",
+          "title": "SmartUI Fusion",
+          "icon": "$(brain)"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "SmartUI Fusion",
+      "properties": {
+        "smartui.serverUrl": {
+          "type": "string",
+          "default": "ws://localhost:8000/ws",
+          "description": "SmartUI Fusion 服務器地址"
+        },
+        "smartui.enableVoiceCommands": {
+          "type": "boolean",
+          "default": true,
+          "description": "啟用語音命令功能"
+        },
+        "smartui.enableVisualDebug": {
+          "type": "boolean",
+          "default": true,
+          "description": "啟用可視化調試功能"
+        },
+        "smartui.enableUserAnalytics": {
+          "type": "boolean",
+          "default": true,
+          "description": "啟用用戶行為分析"
+        },
+        "smartui.autoConnect": {
+          "type": "boolean",
+          "default": true,
+          "description": "自動連接到 SmartUI 服務器"
+        }
+      }
+    },
+    "keybindings": [
+      {
+        "command": "smartui.startVoiceCommand",
+        "key": "ctrl+shift+v",
+        "mac": "cmd+shift+v",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "smartui.toggleVisualDebug",
+        "key": "ctrl+shift+d",
+        "mac": "cmd+shift+d"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "smartui.startVoiceCommand",
+          "group": "smartui@1",
+          "when": "smartui.enabled"
+        },
+        {
+          "command": "smartui.toggleVisualDebug",
+          "group": "smartui@2",
+          "when": "smartui.enabled"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "smartui.showUserAnalytics",
+          "when": "view == smartui.userAnalytics",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/node": "16.x",
+    "typescript": "^4.9.4"
+  },
+  "dependencies": {
+    "ws": "^8.14.2",
+    "axios": "^1.6.0"
+  }
+}
+

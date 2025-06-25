@@ -29,8 +29,8 @@ from .protocols.ag_ui_protocol import (
     AGUIProtocolHandler, VoiceCommandMessage, VisualDebugMessage,
     UIModificationMessage, StateSyncMessage, UserInteractionMessage
 )
-from .core.enhanced_decision_engine import EnhancedDecisionEngine, DecisionContext, UserInteraction, InteractionType
-from .core.smartui_user_analyzer import SmartUIUserAnalyzer
+from .core.enhanced_decision_engine import EnhancedDecisionEngine, DecisionContext
+from .core.smartui_user_analyzer import SmartUIUserAnalyzer, UserInteraction, InteractionType
 from .integrations.stagewise_integration import StagewiseIntegration
 
 

@@ -1,0 +1,58 @@
+{
+  "name": "smartui-fusion-desktop",
+  "version": "1.0.0",
+  "description": "SmartUI Fusion 桌面應用 - 智能UI開發和分析工具",
+  "main": "src/main.js",
+  "author": "SmartUI Fusion Team",
+  "license": "MIT",
+  "homepage": "https://smartui-fusion.com",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "build-win": "electron-builder --win",
+    "build-mac": "electron-builder --mac",
+    "build-linux": "electron-builder --linux",
+    "pack": "electron-builder --dir",
+    "dist": "npm run build"
+  },
+  "build": {
+    "appId": "com.smartui.fusion.desktop",
+    "productName": "SmartUI Fusion",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "devDependencies": {
+    "electron": "^22.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "dependencies": {
+    "ws": "^8.14.2",
+    "axios": "^1.6.0",
+    "electron-store": "^8.1.0",
+    "node-speech-api": "^0.4.0"
+  }
+}
+

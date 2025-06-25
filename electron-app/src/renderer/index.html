@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartUI Fusion - 智能UI開發工具</title>
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+    <div id="app">
+        <!-- 頂部工具欄 -->
+        <header class="toolbar">
+            <div class="toolbar-left">
+                <div class="logo">
+                    <span class="logo-icon">🧠</span>
+                    <span class="logo-text">SmartUI Fusion</span>
+                </div>
+            </div>
+            
+            <div class="toolbar-center">
+                <div class="connection-status" id="connectionStatus">
+                    <span class="status-indicator" id="statusIndicator"></span>
+                    <span class="status-text" id="statusText">未連接</span>
+                </div>
+            </div>
+            
+            <div class="toolbar-right">
+                <button class="toolbar-btn" id="voiceBtn" title="語音命令 (Ctrl+Shift+V)">
+                    <span class="btn-icon">🎤</span>
+                    <span class="btn-text">語音</span>
+                </button>
+                <button class="toolbar-btn" id="debugBtn" title="可視化調試 (Ctrl+Shift+D)">
+                    <span class="btn-icon">👁️</span>
+                    <span class="btn-text">調試</span>
+                </button>
+                <button class="toolbar-btn" id="analyticsBtn" title="用戶分析 (Ctrl+Shift+A)">
+                    <span class="btn-icon">📊</span>
+                    <span class="btn-text">分析</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- 主內容區域 -->
+        <main class="main-content">
+            <!-- 側邊欄 -->
+            <aside class="sidebar">
+                <nav class="sidebar-nav">
+                    <div class="nav-section">
+                        <h3 class="nav-title">項目</h3>
+                        <ul class="nav-list">
+                            <li class="nav-item">
+                                <button class="nav-btn" id="newProjectBtn">
+                                    <span class="nav-icon">📁</span>
+                                    <span class="nav-text">新建項目</span>
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-btn" id="openProjectBtn">
+                                    <span class="nav-icon">📂</span>
+                                    <span class="nav-text">打開項目</span>
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="nav-section">
+                        <h3 class="nav-title">SmartUI 功能</h3>
+                        <ul class="nav-list">
+                            <li class="nav-item">
+                                <button class="nav-btn" id="voiceControlBtn">
+                                    <span class="nav-icon">🎙️</span>
+                                    <span class="nav-text">語音控制</span>
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-btn" id="visualDebugBtn">
+                                    <span class="nav-icon">🔍</span>
+                                    <span class="nav-text">可視化調試</span>
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-btn" id="userAnalysisBtn">
+                                    <span class="nav-icon">📈</span>
+                                    <span class="nav-text">用戶分析</span>
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-btn" id="smartSuggestionsBtn">
+                                    <span class="nav-icon">💡</span>
+                                    <span class="nav-text">智能建議</span>
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                </nav>
+            </aside>
+
+            <!-- 內容面板 -->
+            <section class="content-panel">
+                <div class="panel-container">
+                    <!-- 歡迎面板 -->
+                    <div class="panel welcome-panel active" id="welcomePanel">
+                        <div class="welcome-content">
+                            <h1 class="welcome-title">歡迎使用 SmartUI Fusion</h1>
+                            <p class="welcome-subtitle">智能UI開發和分析工具</p>
+                            
+                            <div class="feature-grid">
+                                <div class="feature-card">
+                                    <div class="feature-icon">🎤</div>
+                                    <h3 class="feature-title">語音命令</h3>
+                                    <p class="feature-description">使用自然語言控制開發環境，提高開發效率</p>
+                                </div>
+                                
+                                <div class="feature-card">
+                                    <div class="feature-icon">👁️</div>
+                                    <h3 class="feature-title">可視化調試</h3>
+                                    <p class="feature-description">智能分析UI元素，提供實時調試和優化建議</p>
+                                </div>
+                                
+                                <div class="feature-card">
+                                    <div class="feature-icon">📊</div>
+                                    <h3 class="feature-title">用戶分析</h3>
+                                    <p class="feature-description">深度分析用戶行為，優化界面設計和交互體驗</p>
+                                </div>
+                                
+                                <div class="feature-card">
+                                    <div class="feature-icon">🤖</div>
+                                    <h3 class="feature-title">智能建議</h3>
+                                    <p class="feature-description">AI驅動的代碼建議和界面優化方案</p>
+                                </div>
+                            </div>
+                            
+                            <div class="quick-actions">
+                                <button class="action-btn primary" id="connectBtn">
+                                    <span class="btn-icon">🔗</span>
+                                    <span class="btn-text">連接 SmartUI 服務器</span>
+                                </button>
+                                <button class="action-btn secondary" id="settingsBtn">
+                                    <span class="btn-icon">⚙️</span>
+                                    <span class="btn-text">打開設置</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 語音控制面板 -->
+                    <div class="panel voice-panel" id="voicePanel">
+                        <div class="panel-header">
+                            <h2 class="panel-title">🎤 語音控制</h2>
+                            <div class="panel-actions">
+                                <button class="panel-btn" id="startVoiceBtn">開始聽取</button>
+                                <button class="panel-btn" id="stopVoiceBtn" disabled>停止聽取</button>
+                            </div>
+                        </div>
+                        
+                        <div class="panel-content">
+                            <div class="voice-status" id="voiceStatus">
+                                <div class="status-indicator inactive" id="voiceIndicator"></div>
+                                <span class="status-text">語音命令未啟動</span>
+                            </div>
+                            
+                            <div class="voice-commands">
+                                <h3>支持的語音命令：</h3>
+                                <ul class="command-list">
+                                    <li>"創建新項目" - 創建新的開發項目</li>
+                                    <li>"打開文件" - 打開指定文件</li>
+                                    <li>"開始調試" - 啟動可視化調試</li>
+                                    <li>"顯示分析" - 查看用戶分析報告</li>
+                                    <li>"保存項目" - 保存當前項目</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="voice-history" id="voiceHistory">
+                                <h3>命令歷史：</h3>
+                                <div class="history-list" id="historyList">
+                                    <!-- 動態添加命令歷史 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 可視化調試面板 -->
+                    <div class="panel debug-panel" id="debugPanel">
+                        <div class="panel-header">
+                            <h2 class="panel-title">👁️ 可視化調試</h2>
+                            <div class="panel-actions">
+                                <button class="panel-btn" id="toggleDebugBtn">啟動調試</button>
+                                <button class="panel-btn" id="clearDebugBtn">清除數據</button>
+                            </div>
+                        </div>
+                        
+                        <div class="panel-content">
+                            <div class="debug-info" id="debugInfo">
+                                <p>點擊"啟動調試"開始可視化調試模式</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 用戶分析面板 -->
+                    <div class="panel analytics-panel" id="analyticsPanel">
+                        <div class="panel-header">
+                            <h2 class="panel-title">📊 用戶分析</h2>
+                            <div class="panel-actions">
+                                <button class="panel-btn" id="refreshAnalyticsBtn">刷新數據</button>
+                                <button class="panel-btn" id="exportAnalyticsBtn">導出報告</button>
+                            </div>
+                        </div>
+                        
+                        <div class="panel-content">
+                            <div class="analytics-content" id="analyticsContent">
+                                <div class="loading">載入用戶分析數據中...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- 狀態欄 -->
+        <footer class="status-bar">
+            <div class="status-left">
+                <span class="status-item" id="serverStatus">服務器: 未連接</span>
+                <span class="status-item" id="userInfo">用戶: 未登錄</span>
+            </div>
+            
+            <div class="status-right">
+                <span class="status-item" id="versionInfo">v1.0.0</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- 載入 JavaScript -->
+    <script src="js/main.js"></script>
+</body>
+</html>
+
