@@ -1,456 +1,531 @@
 """
 SmartUI Fusion Main Application
-主應用程序入口點
+三框架智慧UI整合平台的主應用程序 - 深度整合 smartui_mcp
+
+整合框架：
+- Stagewise: 前端可視化調試工具
+- LiveKit: 語音AI交互框架  
+- AG-UI Protocol: 統一通信協議
+- smartui_mcp: 智能決策引擎 (深度整合)
+
+作者: SmartUI Fusion Team
+版本: 1.0.0
 """
 
 import asyncio
-import uvicorn
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
-from contextlib import asynccontextmanager
-import json
 import logging
-from typing import Dict, Any, List
-import os
+import json
+from pathlib import Path
+from typing import Dict, Any, Optional
+from datetime import datetime
+
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
 
 from .protocols.ag_ui_protocol import (
-    AGUIProtocolHandler, MessageType, AGUIMessage,
-    VoiceCommandMessage, VisualDebugMessage, UIModificationMessage
+    AGUIProtocolHandler, VoiceCommandMessage, VisualDebugMessage,
+    UIModificationMessage, StateSyncMessage, UserInteractionMessage
 )
-from .core.decision_engine import SmartUIDecisionEngine
+from .core.enhanced_decision_engine import EnhancedDecisionEngine, DecisionContext, UserInteraction, InteractionType
+from .core.smartui_user_analyzer import SmartUIUserAnalyzer
 from .integrations.stagewise_integration import StagewiseIntegration
 
 
-# 配置日誌
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-
 class SmartUIFusionApp:
-    """SmartUI Fusion 主應用程序"""
+    """SmartUI Fusion 主應用程序 - 深度整合 smartui_mcp"""
     
-    def __init__(self):
-        self.config = self._load_config()
+    def __init__(self, config_path: Optional[str] = None):
+        self.app = FastAPI(
+            title="SmartUI Fusion - Enhanced with SmartUI MCP",
+            description="三框架智慧UI整合平台 - 深度整合 smartui_mcp 智能分析",
+            version="1.0.0"
+        )
+        
+        # 載入配置
+        self.config = self._load_config(config_path)
+        
+        # 初始化日誌
+        self.logger = self._setup_logging()
         
         # 初始化核心組件
         self.protocol_handler = AGUIProtocolHandler()
-        self.decision_engine = SmartUIDecisionEngine(self.config.get('decision_engine', {}))
-        self.stagewise_integration = StagewiseIntegration(self.config.get('stagewise', {}))
+        
+        # 使用增強的決策引擎（整合 smartui_mcp）
+        self.decision_engine = EnhancedDecisionEngine(self.config.get('decision_engine', {}))
+        
+        # SmartUI 用戶分析器
+        self.user_analyzer = SmartUIUserAnalyzer(self.config.get('user_analyzer', {}))
+        
+        # Stagewise 整合
+        self.stagewise = StagewiseIntegration(self.config.get('stagewise', {}))
         
         # WebSocket 連接管理
-        self.active_connections: List[WebSocket] = []
-        self.session_connections: Dict[str, List[WebSocket]] = {}
+        self.active_connections: Dict[str, WebSocket] = {}
         
-        # 註冊消息處理器
-        self._register_message_handlers()
+        # 用戶會話管理
+        self.user_sessions: Dict[str, Dict[str, Any]] = {}
         
-        # 註冊 Stagewise 事件處理器
-        self._register_stagewise_handlers()
+        # 設置路由和中間件
+        self._setup_middleware()
+        self._setup_routes()
+        
+        self.logger.info("SmartUI Fusion App initialized with SmartUI MCP integration")
     
-    def _load_config(self) -> Dict[str, Any]:
-        """載入配置"""
-        config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'app_config.json')
-        
-        default_config = {
-            "app": {
-                "host": "0.0.0.0",
-                "port": 8000,
-                "debug": True
-            },
-            "decision_engine": {
-                "strategy": "hybrid",
-                "confidence_threshold": 0.7,
-                "learning_enabled": True
-            },
-            "stagewise": {
-                "toolbar_port": 3001,
-                "debug_mode": True,
-                "auto_inject": True,
-                "headless": False
-            },
-            "livekit": {
-                "enabled": False,
-                "server_url": "",
-                "api_key": "",
-                "api_secret": ""
-            }
-        }
+    def _load_config(self, config_path: Optional[str]) -> Dict[str, Any]:
+        """載入配置文件"""
+        if config_path is None:
+            config_path = Path(__file__).parent.parent / "config" / "app_config.json"
         
         try:
-            if os.path.exists(config_path):
-                with open(config_path, 'r', encoding='utf-8') as f:
-                    user_config = json.load(f)
-                    # 合併配置
-                    default_config.update(user_config)
+            with open(config_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
         except Exception as e:
-            logger.warning(f"Failed to load config file: {e}, using default config")
-        
-        return default_config
+            print(f"Failed to load config: {e}")
+            return {}
     
-    def _register_message_handlers(self):
-        """註冊消息處理器"""
+    def _setup_logging(self) -> logging.Logger:
+        """設置日誌系統"""
+        log_config = self.config.get('logging', {})
         
-        self.protocol_handler.register_handler(
-            MessageType.VOICE_COMMAND,
-            self._handle_voice_command
+        logging.basicConfig(
+            level=getattr(logging, log_config.get('level', 'INFO')),
+            format=log_config.get('format', '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         )
         
-        self.protocol_handler.register_handler(
-            MessageType.VISUAL_DEBUG,
-            self._handle_visual_debug
-        )
-        
-        self.protocol_handler.register_handler(
-            MessageType.UI_MODIFICATION,
-            self._handle_ui_modification
-        )
-        
-        self.protocol_handler.register_handler(
-            MessageType.USER_INTERACTION,
-            self._handle_user_interaction
-        )
+        return logging.getLogger(__name__)
     
-    def _register_stagewise_handlers(self):
-        """註冊 Stagewise 事件處理器"""
-        
-        self.stagewise_integration.register_event_handler(
-            'element_selected',
-            self._on_stagewise_element_selected
-        )
-        
-        self.stagewise_integration.register_event_handler(
-            'element_modified',
-            self._on_stagewise_element_modified
+    def _setup_middleware(self):
+        """設置中間件"""
+        # CORS 中間件
+        cors_origins = self.config.get('security', {}).get('cors_origins', ["*"])
+        self.app.add_middleware(
+            CORSMiddleware,
+            allow_origins=cors_origins,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
         )
     
-    async def _handle_voice_command(self, message: VoiceCommandMessage) -> AGUIMessage:
-        """處理語音指令"""
-        logger.info(f"Processing voice command: {message.payload.get('transcript', '')}")
+    def _setup_routes(self):
+        """設置路由"""
         
-        # 使用決策引擎處理語音指令
-        ui_modification = await self.decision_engine.process_voice_command(message)
+        @self.app.get("/")
+        async def root():
+            return {
+                "message": "SmartUI Fusion API - Enhanced with SmartUI MCP", 
+                "version": "1.0.0", 
+                "status": "running",
+                "features": [
+                    "Voice Command Processing",
+                    "Visual Debug Integration", 
+                    "Smart User Analysis",
+                    "Adaptive UI Generation",
+                    "Multi-framework Decision Engine"
+                ]
+            }
         
-        if ui_modification:
-            # 執行UI修改
-            success = await self.stagewise_integration.execute_modification(ui_modification)
+        @self.app.get("/health")
+        async def health_check():
+            return {
+                "status": "healthy",
+                "timestamp": datetime.now().isoformat(),
+                "components": {
+                    "enhanced_decision_engine": "active",
+                    "smartui_user_analyzer": "active",
+                    "stagewise_integration": "active",
+                    "protocol_handler": "active"
+                }
+            }
+        
+        @self.app.websocket("/ws")
+        async def websocket_endpoint(websocket: WebSocket):
+            await self._handle_websocket_connection(websocket)
+        
+        @self.app.post("/api/navigate")
+        async def navigate_to_url(request: dict):
+            """導航到指定URL"""
+            url = request.get('url')
+            user_id = request.get('user_id', 'anonymous')
             
-            if success:
-                # 廣播修改結果
-                await self._broadcast_message(ui_modification)
+            if not url:
+                raise HTTPException(status_code=400, detail="URL is required")
+            
+            try:
+                # 記錄用戶交互
+                await self._record_user_interaction(
+                    user_id=user_id,
+                    interaction_type=InteractionType.MOUSE,
+                    action="navigate",
+                    element_id="navigation",
+                    context={"url": url},
+                    success=True
+                )
                 
-                return AGUIMessage(
-                    message_type=MessageType.UI_RESPONSE,
-                    source='smartui_fusion',
-                    target=message.source,
-                    session_id=message.session_id,
-                    payload={
-                        'status': 'success',
-                        'message': 'Voice command executed successfully',
-                        'modification_id': ui_modification.payload.get('modification_id')
-                    }
-                )
-            else:
-                return AGUIMessage(
-                    message_type=MessageType.ERROR_REPORT,
-                    source='smartui_fusion',
-                    target=message.source,
-                    session_id=message.session_id,
-                    payload={
-                        'error': 'Failed to execute UI modification',
-                        'error_code': 'EXECUTION_FAILED'
-                    }
-                )
-        else:
-            return AGUIMessage(
-                message_type=MessageType.VOICE_RESPONSE,
-                source='smartui_fusion',
-                target=message.source,
-                session_id=message.session_id,
-                payload={
-                    'message': 'Could not understand voice command',
-                    'suggestions': ['Please try rephrasing your request']
-                }
-            )
-    
-    async def _handle_visual_debug(self, message: VisualDebugMessage) -> AGUIMessage:
-        """處理可視化調試消息"""
-        logger.info(f"Processing visual debug: {message.payload.get('action', '')}")
-        
-        # 使用決策引擎處理可視化調試
-        response = await self.decision_engine.process_visual_debug(message)
-        
-        if response:
-            # 廣播響應
-            await self._broadcast_message(response)
-        
-        return response or AGUIMessage(
-            message_type=MessageType.UI_RESPONSE,
-            source='smartui_fusion',
-            target=message.source,
-            session_id=message.session_id,
-            payload={'status': 'processed'}
-        )
-    
-    async def _handle_ui_modification(self, message: UIModificationMessage) -> AGUIMessage:
-        """處理UI修改消息"""
-        logger.info(f"Processing UI modification: {message.payload.get('modification_type', '')}")
-        
-        # 執行修改
-        success = await self.stagewise_integration.execute_modification(message)
-        
-        if success:
-            # 廣播修改結果
-            await self._broadcast_message(message)
-            
-            return AGUIMessage(
-                message_type=MessageType.UI_RESPONSE,
-                source='smartui_fusion',
-                target=message.source,
-                session_id=message.session_id,
-                payload={
-                    'status': 'success',
-                    'modification_id': message.payload.get('modification_id')
-                }
-            )
-        else:
-            return AGUIMessage(
-                message_type=MessageType.ERROR_REPORT,
-                source='smartui_fusion',
-                target=message.source,
-                session_id=message.session_id,
-                payload={
-                    'error': 'Failed to execute UI modification',
-                    'error_code': 'EXECUTION_FAILED'
-                }
-            )
-    
-    async def _handle_user_interaction(self, message: AGUIMessage) -> AGUIMessage:
-        """處理用戶交互消息"""
-        logger.info("Processing user interaction")
-        
-        # 使用決策引擎分析用戶交互
-        response = await self.decision_engine.process_user_interaction(message)
-        
-        return response or AGUIMessage(
-            message_type=MessageType.UI_RESPONSE,
-            source='smartui_fusion',
-            target=message.source,
-            session_id=message.session_id,
-            payload={'status': 'analyzed'}
-        )
-    
-    async def _on_stagewise_element_selected(self, message: VisualDebugMessage):
-        """處理 Stagewise 元素選擇事件"""
-        logger.info("Element selected in Stagewise")
-        
-        # 處理元素選擇
-        response = await self._handle_visual_debug(message)
-        
-        # 發送響應到前端
-        if response:
-            await self._broadcast_message(response)
-    
-    async def _on_stagewise_element_modified(self, message: UIModificationMessage):
-        """處理 Stagewise 元素修改事件"""
-        logger.info("Element modified in Stagewise")
-        
-        # 處理元素修改
-        response = await self._handle_ui_modification(message)
-        
-        # 發送響應到前端
-        if response:
-            await self._broadcast_message(response)
-    
-    async def _broadcast_message(self, message: AGUIMessage):
-        """廣播消息到所有連接的客戶端"""
-        if not self.active_connections:
-            return
-        
-        message_json = message.model_dump_json()
-        disconnected = []
-        
-        for connection in self.active_connections:
-            try:
-                await connection.send_text(message_json)
+                result = await self.stagewise.navigate_to_url(url)
+                return {"success": True, "result": result}
             except Exception as e:
-                logger.warning(f"Failed to send message to client: {e}")
-                disconnected.append(connection)
+                # 記錄失敗的交互
+                await self._record_user_interaction(
+                    user_id=user_id,
+                    interaction_type=InteractionType.MOUSE,
+                    action="navigate",
+                    element_id="navigation",
+                    context={"url": url, "error": str(e)},
+                    success=False,
+                    error_message=str(e)
+                )
+                
+                self.logger.error(f"Navigation failed: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
         
-        # 移除斷開的連接
-        for connection in disconnected:
-            self.active_connections.remove(connection)
-    
-    async def initialize(self):
-        """初始化應用程序"""
-        logger.info("Initializing SmartUI Fusion...")
-        
-        # 初始化 Stagewise 整合
-        stagewise_success = await self.stagewise_integration.initialize()
-        if not stagewise_success:
-            logger.warning("Stagewise integration failed to initialize")
-        
-        logger.info("SmartUI Fusion initialized successfully")
-    
-    async def cleanup(self):
-        """清理資源"""
-        logger.info("Cleaning up SmartUI Fusion...")
-        
-        # 清理 Stagewise 整合
-        await self.stagewise_integration.cleanup()
-        
-        # 關閉所有 WebSocket 連接
-        for connection in self.active_connections:
+        @self.app.get("/api/screenshot")
+        async def take_screenshot():
+            """截取當前頁面截圖"""
             try:
-                await connection.close()
-            except:
-                pass
+                screenshot_path = await self.stagewise.take_screenshot()
+                return {"success": True, "screenshot_path": screenshot_path}
+            except Exception as e:
+                self.logger.error(f"Screenshot failed: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
         
-        logger.info("SmartUI Fusion cleanup completed")
-
-
-# 全局應用實例
-app_instance = SmartUIFusionApp()
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """應用生命週期管理"""
-    # 啟動
-    await app_instance.initialize()
-    yield
-    # 關閉
-    await app_instance.cleanup()
-
-
-# 創建 FastAPI 應用
-app = FastAPI(
-    title="SmartUI Fusion",
-    description="三框架智慧UI整合平台",
-    version="1.0.0",
-    lifespan=lifespan
-)
-
-# 添加 CORS 中間件
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# 靜態文件服務
-static_dir = os.path.join(os.path.dirname(__file__), '..', 'static')
-if os.path.exists(static_dir):
-    app.mount("/static", StaticFiles(directory=static_dir), name="static")
-
-
-@app.get("/")
-async def root():
-    """根路徑"""
-    return {
-        "message": "SmartUI Fusion API",
-        "version": "1.0.0",
-        "status": "running"
-    }
-
-
-@app.get("/health")
-async def health_check():
-    """健康檢查"""
-    return {
-        "status": "healthy",
-        "stagewise_connected": app_instance.stagewise_integration.is_connected,
-        "active_connections": len(app_instance.active_connections)
-    }
-
-
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    """WebSocket 端點"""
-    await websocket.accept()
-    app_instance.active_connections.append(websocket)
-    
-    try:
-        while True:
-            # 接收消息
-            data = await websocket.receive_text()
-            
+        @self.app.get("/api/metrics")
+        async def get_metrics():
+            """獲取系統性能指標"""
             try:
-                # 解析消息
+                decision_metrics = await self.decision_engine.get_performance_metrics()
+                return {"success": True, "metrics": decision_metrics}
+            except Exception as e:
+                self.logger.error(f"Failed to get metrics: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
+        
+        @self.app.get("/api/user/{user_id}/profile")
+        async def get_user_profile(user_id: str):
+            """獲取用戶檔案和分析"""
+            try:
+                user_insights = await self.user_analyzer.get_user_insights(user_id)
+                return {"success": True, "user_insights": user_insights}
+            except Exception as e:
+                self.logger.error(f"Failed to get user profile: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
+        
+        @self.app.post("/api/user/{user_id}/interaction")
+        async def record_user_interaction(user_id: str, interaction_data: dict):
+            """記錄用戶交互"""
+            try:
+                interaction = UserInteraction(
+                    interaction_id=interaction_data.get('interaction_id', f"int_{datetime.now().timestamp()}"),
+                    user_id=user_id,
+                    session_id=interaction_data.get('session_id', 'default'),
+                    timestamp=datetime.now(),
+                    interaction_type=InteractionType(interaction_data.get('interaction_type', 'mouse')),
+                    element_id=interaction_data.get('element_id'),
+                    element_type=interaction_data.get('element_type'),
+                    action=interaction_data.get('action', 'unknown'),
+                    context=interaction_data.get('context', {}),
+                    success=interaction_data.get('success', True),
+                    duration=interaction_data.get('duration', 0),
+                    error_message=interaction_data.get('error_message')
+                )
+                
+                success = await self.user_analyzer.record_interaction(interaction)
+                
+                if success:
+                    return {"success": True, "message": "Interaction recorded"}
+                else:
+                    raise HTTPException(status_code=500, detail="Failed to record interaction")
+                    
+            except Exception as e:
+                self.logger.error(f"Failed to record interaction: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
+        
+        @self.app.post("/api/user/{user_id}/analyze")
+        async def analyze_user_behavior(user_id: str, context: dict = None):
+            """分析用戶行為"""
+            try:
+                analysis = await self.user_analyzer.analyze_user_behavior(user_id, context)
+                return {"success": True, "analysis": analysis}
+            except Exception as e:
+                self.logger.error(f"Failed to analyze user behavior: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
+    
+    async def _handle_websocket_connection(self, websocket: WebSocket):
+        """處理 WebSocket 連接"""
+        await websocket.accept()
+        connection_id = f"conn_{len(self.active_connections)}"
+        self.active_connections[connection_id] = websocket
+        
+        self.logger.info(f"WebSocket connection established: {connection_id}")
+        
+        try:
+            while True:
+                # 接收消息
+                data = await websocket.receive_text()
                 message_data = json.loads(data)
-                message = app_instance.protocol_handler.deserialize_message(data)
                 
                 # 處理消息
-                response = await app_instance.protocol_handler.process_message(message)
+                response = await self._process_websocket_message(message_data, connection_id)
                 
                 # 發送響應
-                if response:
-                    await websocket.send_text(response.model_dump_json())
-                    
-            except json.JSONDecodeError:
-                await websocket.send_text(json.dumps({
-                    "error": "Invalid JSON format"
-                }))
-            except Exception as e:
-                logger.error(f"Error processing WebSocket message: {e}")
-                await websocket.send_text(json.dumps({
-                    "error": str(e)
-                }))
+                await websocket.send_text(json.dumps(response))
                 
-    except WebSocketDisconnect:
-        app_instance.active_connections.remove(websocket)
-
-
-@app.post("/api/navigate")
-async def navigate_to_url(request: dict):
-    """導航到指定 URL"""
-    url = request.get('url')
-    if not url:
-        raise HTTPException(status_code=400, detail="URL is required")
+        except WebSocketDisconnect:
+            self.logger.info(f"WebSocket connection closed: {connection_id}")
+        except Exception as e:
+            self.logger.error(f"WebSocket error: {e}")
+        finally:
+            if connection_id in self.active_connections:
+                del self.active_connections[connection_id]
     
-    try:
-        await app_instance.stagewise_integration.navigate_to_url(url)
-        return {"status": "success", "message": f"Navigated to {url}"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    async def _process_websocket_message(self, message_data: Dict[str, Any], connection_id: str) -> Dict[str, Any]:
+        """處理 WebSocket 消息"""
+        try:
+            message_type = message_data.get('message_type')
+            user_id = message_data.get('user_id', 'anonymous')
+            
+            # 記錄 WebSocket 交互
+            await self._record_user_interaction(
+                user_id=user_id,
+                interaction_type=InteractionType.KEYBOARD,  # WebSocket 通常是鍵盤觸發
+                action=f"websocket_{message_type}",
+                element_id="websocket_interface",
+                context={"connection_id": connection_id, "message_type": message_type},
+                success=True
+            )
+            
+            if message_type == 'voice_command':
+                return await self._handle_voice_command(message_data)
+            elif message_type == 'visual_debug':
+                return await self._handle_visual_debug(message_data)
+            elif message_type == 'user_interaction':
+                return await self._handle_user_interaction(message_data)
+            else:
+                return {
+                    "success": False,
+                    "error": f"Unknown message type: {message_type}"
+                }
+                
+        except Exception as e:
+            self.logger.error(f"Message processing error: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    async def _handle_voice_command(self, message_data: Dict[str, Any]) -> Dict[str, Any]:
+        """處理語音指令"""
+        try:
+            voice_message = VoiceCommandMessage(**message_data)
+            
+            # 記錄語音交互
+            await self._record_user_interaction(
+                user_id=voice_message.user_id,
+                interaction_type=InteractionType.VOICE,
+                action="voice_command",
+                element_id="voice_interface",
+                context={
+                    "transcript": voice_message.payload.get('transcript', ''),
+                    "confidence": voice_message.payload.get('confidence', 0)
+                },
+                success=True,
+                duration=voice_message.payload.get('duration', 0)
+            )
+            
+            # 使用增強的決策引擎處理
+            ui_modification = await self.decision_engine.process_voice_command(voice_message)
+            
+            if ui_modification:
+                return {
+                    "success": True,
+                    "message_type": "ui_modification",
+                    "data": ui_modification.to_dict()
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": "Unable to process voice command"
+                }
+                
+        except Exception as e:
+            # 記錄失敗的語音交互
+            user_id = message_data.get('user_id', 'anonymous')
+            await self._record_user_interaction(
+                user_id=user_id,
+                interaction_type=InteractionType.VOICE,
+                action="voice_command",
+                element_id="voice_interface",
+                context={"error": str(e)},
+                success=False,
+                error_message=str(e)
+            )
+            
+            return {"success": False, "error": str(e)}
+    
+    async def _handle_visual_debug(self, message_data: Dict[str, Any]) -> Dict[str, Any]:
+        """處理可視化調試"""
+        try:
+            visual_message = VisualDebugMessage(**message_data)
+            
+            # 記錄視覺調試交互
+            await self._record_user_interaction(
+                user_id=visual_message.user_id,
+                interaction_type=InteractionType.VISUAL,
+                action="visual_debug",
+                element_id=visual_message.payload.get('selected_element', {}).get('id', 'unknown'),
+                context={
+                    "debug_action": visual_message.payload.get('debug_action', ''),
+                    "selected_element": visual_message.payload.get('selected_element', {})
+                },
+                success=True
+            )
+            
+            # 使用增強的決策引擎處理
+            ui_modification = await self.decision_engine.process_visual_debug(visual_message)
+            
+            if ui_modification:
+                return {
+                    "success": True,
+                    "message_type": "ui_modification", 
+                    "data": ui_modification.to_dict()
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": "Unable to process visual debug command"
+                }
+                
+        except Exception as e:
+            # 記錄失敗的視覺調試交互
+            user_id = message_data.get('user_id', 'anonymous')
+            await self._record_user_interaction(
+                user_id=user_id,
+                interaction_type=InteractionType.VISUAL,
+                action="visual_debug",
+                element_id="visual_interface",
+                context={"error": str(e)},
+                success=False,
+                error_message=str(e)
+            )
+            
+            return {"success": False, "error": str(e)}
+    
+    async def _handle_user_interaction(self, message_data: Dict[str, Any]) -> Dict[str, Any]:
+        """處理用戶交互"""
+        try:
+            interaction_message = UserInteractionMessage(**message_data)
+            
+            # 創建 UserInteraction 對象並記錄
+            user_interaction = UserInteraction(
+                interaction_id=f"ui_{datetime.now().timestamp()}",
+                user_id=interaction_message.user_id,
+                session_id=interaction_message.session_id,
+                timestamp=datetime.now(),
+                interaction_type=InteractionType(interaction_message.payload.get('interaction_type', 'mouse')),
+                element_id=interaction_message.payload.get('element_id'),
+                element_type=interaction_message.payload.get('element_type'),
+                action=interaction_message.payload.get('action', 'unknown'),
+                context=interaction_message.payload.get('context', {}),
+                success=interaction_message.payload.get('success', True),
+                duration=interaction_message.payload.get('duration', 0)
+            )
+            
+            success = await self.user_analyzer.record_interaction(user_interaction)
+            
+            if success:
+                # 觸發實時分析
+                analysis = await self.user_analyzer.analyze_user_behavior(
+                    interaction_message.user_id, 
+                    interaction_message.payload.get('context', {})
+                )
+                
+                return {
+                    "success": True,
+                    "message_type": "interaction_recorded",
+                    "data": {
+                        "recorded": True,
+                        "real_time_analysis": analysis
+                    }
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": "Failed to record interaction"
+                }
+            
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+    
+    async def _record_user_interaction(self, user_id: str, interaction_type: InteractionType,
+                                     action: str, element_id: str, context: Dict[str, Any],
+                                     success: bool, duration: float = 0, 
+                                     error_message: Optional[str] = None):
+        """記錄用戶交互的輔助方法"""
+        try:
+            interaction = UserInteraction(
+                interaction_id=f"auto_{datetime.now().timestamp()}",
+                user_id=user_id,
+                session_id=self._get_or_create_session_id(user_id),
+                timestamp=datetime.now(),
+                interaction_type=interaction_type,
+                element_id=element_id,
+                element_type=context.get('element_type'),
+                action=action,
+                context=context,
+                success=success,
+                duration=duration,
+                error_message=error_message
+            )
+            
+            await self.user_analyzer.record_interaction(interaction)
+            
+        except Exception as e:
+            self.logger.error(f"Failed to record user interaction: {e}")
+    
+    def _get_or_create_session_id(self, user_id: str) -> str:
+        """獲取或創建用戶會話ID"""
+        if user_id not in self.user_sessions:
+            self.user_sessions[user_id] = {
+                'session_id': f"session_{user_id}_{datetime.now().timestamp()}",
+                'start_time': datetime.now(),
+                'last_activity': datetime.now()
+            }
+        else:
+            self.user_sessions[user_id]['last_activity'] = datetime.now()
+        
+        return self.user_sessions[user_id]['session_id']
+    
+    async def start_server(self):
+        """啟動服務器"""
+        try:
+            # 初始化組件
+            await self.stagewise.initialize()
+            
+            self.logger.info("SmartUI Fusion server starting with SmartUI MCP integration...")
+            
+            # 啟動 FastAPI 服務器
+            config = uvicorn.Config(
+                self.app,
+                host=self.config.get('app', {}).get('host', '0.0.0.0'),
+                port=self.config.get('app', {}).get('port', 8000),
+                log_level=self.config.get('logging', {}).get('level', 'info').lower()
+            )
+            
+            server = uvicorn.Server(config)
+            await server.serve()
+            
+        except Exception as e:
+            self.logger.error(f"Failed to start server: {e}")
+            raise
 
 
-@app.get("/api/screenshot")
-async def take_screenshot():
-    """截取頁面截圖"""
-    try:
-        screenshot = await app_instance.stagewise_integration.take_screenshot()
-        return {"screenshot": screenshot}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/metrics")
-async def get_metrics():
-    """獲取性能指標"""
-    try:
-        metrics = await app_instance.decision_engine.get_performance_metrics()
-        return metrics
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-def main():
+async def main():
     """主函數"""
-    config = app_instance.config.get('app', {})
-    
-    uvicorn.run(
-        "src.main:app",
-        host=config.get('host', '0.0.0.0'),
-        port=config.get('port', 8000),
-        reload=config.get('debug', True),
-        log_level="info"
-    )
+    app = SmartUIFusionApp()
+    await app.start_server()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
