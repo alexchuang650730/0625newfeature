@@ -1,0 +1,74 @@
+{
+  "name": "smartui-fusion",
+  "version": "1.0.0",
+  "description": "三框架智慧UI整合項目 - 建立技術護城河",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "vite",
+    "dev:backend": "uvicorn src.main:app --reload --host 0.0.0.0 --port 8000",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "lint": "eslint . --ext js,jsx,ts,tsx",
+    "lint:fix": "eslint . --ext js,jsx,ts,tsx --fix",
+    "format": "prettier --write .",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "@stagewise/toolbar-react": "^1.0.0",
+    "livekit-client": "^1.15.0",
+    "socket.io-client": "^4.7.0",
+    "@reduxjs/toolkit": "^1.9.0",
+    "react-redux": "^8.1.0",
+    "axios": "^1.6.0",
+    "framer-motion": "^10.16.0",
+    "lucide-react": "^0.294.0",
+    "@headlessui/react": "^1.7.0",
+    "@heroicons/react": "^2.0.0",
+    "clsx": "^2.0.0",
+    "tailwind-merge": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "@vitejs/plugin-react": "^4.0.0",
+    "autoprefixer": "^10.4.0",
+    "concurrently": "^8.2.0",
+    "eslint": "^8.45.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.0",
+    "postcss": "^8.4.0",
+    "prettier": "^3.0.0",
+    "tailwindcss": "^3.3.0",
+    "typescript": "^5.0.0",
+    "vite": "^4.4.0",
+    "vitest": "^0.34.0"
+  },
+  "keywords": [
+    "smartui",
+    "stagewise",
+    "livekit",
+    "ag-ui",
+    "voice-interaction",
+    "visual-debugging",
+    "ai-ui",
+    "multi-modal"
+  ],
+  "author": "SmartUI Fusion Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alexchuang650730/0625newfeature.git"
+  },
+  "bugs": {
+    "url": "https://github.com/alexchuang650730/0625newfeature/issues"
+  },
+  "homepage": "https://github.com/alexchuang650730/0625newfeature#readme"
+}
+

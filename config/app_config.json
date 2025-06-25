@@ -1,0 +1,111 @@
+{
+  "app": {
+    "host": "0.0.0.0",
+    "port": 8000,
+    "debug": true,
+    "title": "SmartUI Fusion",
+    "description": "三框架智慧UI整合平台"
+  },
+  "decision_engine": {
+    "strategy": "hybrid",
+    "confidence_threshold": 0.7,
+    "learning_enabled": true,
+    "rules": {
+      "voice_commands": {
+        "modify_style": {
+          "patterns": ["change color", "modify style", "update appearance"],
+          "confidence_boost": 0.1
+        },
+        "select_element": {
+          "patterns": ["select", "choose", "pick"],
+          "confidence_boost": 0.15
+        }
+      }
+    },
+    "ml_config": {
+      "model_path": "./models/decision_model.pkl",
+      "feature_extraction": {
+        "use_user_history": true,
+        "use_context": true,
+        "use_device_info": true
+      }
+    },
+    "heuristics": {
+      "user_efficiency_weight": 0.3,
+      "accessibility_weight": 0.4,
+      "performance_weight": 0.3
+    }
+  },
+  "stagewise": {
+    "toolbar_port": 3001,
+    "debug_mode": true,
+    "auto_inject": true,
+    "headless": false,
+    "websocket_url": "ws://localhost:3001/stagewise",
+    "chrome_options": {
+      "no_sandbox": true,
+      "disable_dev_shm_usage": true,
+      "disable_gpu": false,
+      "remote_debugging_port": 9222
+    }
+  },
+  "livekit": {
+    "enabled": false,
+    "server_url": "wss://your-livekit-server.com",
+    "api_key": "",
+    "api_secret": "",
+    "room_config": {
+      "auto_subscribe": true,
+      "adaptive_stream": true,
+      "dynacast": true
+    },
+    "audio_config": {
+      "sample_rate": 16000,
+      "channels": 1,
+      "echo_cancellation": true,
+      "noise_suppression": true
+    }
+  },
+  "ag_ui_protocol": {
+    "version": "1.0",
+    "message_timeout": 30,
+    "max_message_size": 1048576,
+    "compression": true,
+    "encryption": false
+  },
+  "database": {
+    "url": "sqlite:///./smartui_fusion.db",
+    "echo": false,
+    "pool_size": 10,
+    "max_overflow": 20
+  },
+  "redis": {
+    "url": "redis://localhost:6379/0",
+    "max_connections": 10,
+    "socket_timeout": 5
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    "file": "./logs/smartui_fusion.log",
+    "max_size": "10MB",
+    "backup_count": 5
+  },
+  "security": {
+    "cors_origins": ["*"],
+    "api_key_required": false,
+    "rate_limiting": {
+      "enabled": true,
+      "requests_per_minute": 100
+    }
+  },
+  "features": {
+    "voice_interaction": true,
+    "visual_debugging": true,
+    "real_time_collaboration": true,
+    "ai_suggestions": true,
+    "performance_monitoring": true,
+    "accessibility_checking": true
+  }
+}
+
