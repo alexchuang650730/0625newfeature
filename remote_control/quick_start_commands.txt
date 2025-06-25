@@ -1,0 +1,136 @@
+# SmartUI Fusion 遠端控制執行指令
+
+## 🚀 快速開始
+
+### 1. 在 Mac 端執行 (一次性設置)
+
+```bash
+# 從 EC2 複製配置腳本到 Mac
+scp ec2_remote_via_vpn:/home/ubuntu/mac_ssh_setup.sh ~/mac_ssh_setup.sh
+
+# 在 Mac 端執行配置
+chmod +x ~/mac_ssh_setup.sh
+~/mac_ssh_setup.sh
+
+# 啟動守護進程
+~/vsix_deploy/remote_deploy_handler.sh --daemon
+```
+
+### 2. 在 EC2 端執行 (日常使用)
+
+```bash
+# 啟動遠端控制系統
+/home/ubuntu/start_powerautomation_mcp.sh
+
+# 或直接部署
+/home/ubuntu/auto_deploy_vsix.sh
+
+# 檢查狀態
+/home/ubuntu/auto_deploy_vsix.sh --status
+```
+
+## 📋 詳細命令說明
+
+### Mac 端命令
+
+```bash
+# 檢查系統狀態
+~/vsix_deploy/check_status.sh
+
+# 手動安裝 VSIX
+~/vsix_deploy/install_vsix.sh <vsix_file>
+
+# 啟動/停止守護進程
+~/vsix_deploy/remote_deploy_handler.sh --daemon
+kill $(cat ~/vsix_deploy/daemon.pid)
+```
+
+### EC2 端命令
+
+```bash
+# 完整構建和部署
+/home/ubuntu/auto_deploy_vsix.sh
+
+# 部署現有 VSIX
+/home/ubuntu/auto_deploy_vsix.sh --vsix-file /path/to/file.vsix
+
+# 檢查 Mac 端狀態
+/home/ubuntu/auto_deploy_vsix.sh --status
+
+# 測試 SSH 連接
+ssh ec2_remote_via_vpn "echo 'Connection test'"
+```
+
+## 🔧 故障排除
+
+### SSH 連接問題
+```bash
+# 測試基本連接
+ssh -v ec2_remote_via_vpn
+
+# 檢查代理設置
+echo $SOCKS_PROXY
+
+# 測試代理連接
+curl --socks5 127.0.0.1:7897 http://httpbin.org/ip
+```
+
+### VSIX 部署問題
+```bash
+# 檢查 Mac 端日誌
+ssh ec2_remote_via_vpn "tail -f ~/vsix_deploy/install.log"
+
+# 檢查 VS Code 擴展
+ssh ec2_remote_via_vpn "code --list-extensions"
+
+# 手動清理
+ssh ec2_remote_via_vpn "rm -rf ~/vsix_deploy/incoming/*"
+```
+
+## 📁 重要目錄結構
+
+### EC2 端
+```
+/home/ubuntu/
+├── auto_deploy_vsix.sh          # 主部署腳本
+├── mac_ssh_setup.sh             # Mac 端配置腳本
+├── start_powerautomation_mcp.sh # 快速啟動腳本
+└── 0625newfeature/
+    └── vscode-extension/        # VS Code 擴展源碼
+```
+
+### Mac 端
+```
+~/vsix_deploy/
+├── install_vsix.sh              # VSIX 安裝腳本
+├── remote_deploy_handler.sh     # 遠端部署處理器
+├── check_status.sh              # 狀態檢查腳本
+├── incoming/                    # 接收目錄
+├── backup/                      # 備份目錄
+└── install.log                  # 安裝日誌
+```
+
+## 🎯 使用流程
+
+1. **初始設置** (只需執行一次)
+   - 在 Mac 端執行配置腳本
+   - 啟動守護進程
+
+2. **日常開發**
+   - 在 EC2 修改 VS Code 擴展代碼
+   - 執行部署腳本
+   - 自動安裝到 Mac 端 VS Code
+
+3. **測試驗證**
+   - 在 Mac 端 VS Code 測試新功能
+   - 收集反饋和日誌
+   - 迭代改進
+
+## ✅ 成功標誌
+
+- SSH 連接測試成功
+- VSIX 文件能夠傳輸
+- VS Code 擴展自動安裝
+- 守護進程正常運行
+- 日誌記錄完整
+
